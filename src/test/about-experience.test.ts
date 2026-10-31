@@ -100,4 +100,13 @@ describe("About Us experience", () => {
     expect(html).toContain("s2.addEventListener('wheel', handleWheel");
     expect(html).toContain("s2.addEventListener('touchmove', onTouchMove");
   });
+
+  it("configures gentle auto-scroll on icon phase that halts on user interaction", () => {
+    expect(html).toContain("function startAutoScroll");
+    expect(html).toContain("function stopAutoScroll");
+    expect(html).toContain("function onUserInterruptScroll");
+    expect(html).toContain("aboutText.addEventListener('pointerdown', onUserInterruptScroll");
+    expect(html).toContain("aboutText.addEventListener('touchstart', onUserInterruptScroll");
+    expect(html).toContain("startAutoScroll()");
+  });
 });

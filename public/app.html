@@ -666,12 +666,61 @@ $('ksk').innerHTML = $('sk').innerHTML;
   let scrollVelocity = 0, momentumRaf = 0;
   let isDraggingScroll = false;
 
+  /* Auto-scroll after photo transition completes; halts on user touch/press */
+  let autoScrollRaf = 0, autoScrollTimer = 0, autoScrollActive = false;
+  let textTouched = false;
+
+  function stopAutoScroll() {
+    if (autoScrollTimer) { clearTimeout(autoScrollTimer); autoScrollTimer = 0; }
+    if (autoScrollRaf) { cancelAnimationFrame(autoScrollRaf); autoScrollRaf = 0; }
+    autoScrollActive = false;
+  }
+
+  let autoScrollPos = 0;
+  function startAutoScroll() {
+    stopAutoScroll();
+    if (s2.dataset.phase !== 'icon' || textTouched) return;
+    autoScrollActive = true;
+    autoScrollPos = aboutText.scrollTop;
+    let lastT = performance.now();
+    const speed = 28; // gentle, steady reading pace (px/sec)
+
+    function stepAuto(now) {
+      if (!autoScrollActive || s2.dataset.phase !== 'icon' || textTouched) {
+        stopAutoScroll();
+        return;
+      }
+      const dt = (now - lastT) / 1000;
+      lastT = now;
+      if (dt > 0 && dt < 0.2) {
+        autoScrollPos += speed * dt;
+        aboutText.scrollTop = autoScrollPos;
+        if (aboutText.scrollTop + aboutText.clientHeight >= aboutText.scrollHeight - 2) {
+          stopAutoScroll();
+          return;
+        }
+      }
+      autoScrollRaf = requestAnimationFrame(stepAuto);
+    }
+    autoScrollRaf = requestAnimationFrame(stepAuto);
+  }
+
+  function onUserInterruptScroll() {
+    textTouched = true;
+    stopAutoScroll();
+  }
+
+  aboutText.addEventListener('pointerdown', onUserInterruptScroll, { capture: true, passive: true });
+  aboutText.addEventListener('touchstart', onUserInterruptScroll, { capture: true, passive: true });
+  aboutText.addEventListener('mousedown', onUserInterruptScroll, { capture: true, passive: true });
+
   function stopMomentum() {
     if (momentumRaf) { cancelAnimationFrame(momentumRaf); momentumRaf = 0; }
   }
 
   function handleWheel(e) {
     if (s2.dataset.phase !== 'icon') return;
+    onUserInterruptScroll();
     const isRotated = s2.dataset.orientation === 'rotated-landscape';
     const delta = isRotated
       ? (Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX)
@@ -682,6 +731,7 @@ $('ksk').innerHTML = $('sk').innerHTML;
 
   function onTouchStart(e) {
     if (s2.dataset.phase !== 'icon') return;
+    onUserInterruptScroll();
     const touch = e.touches ? e.touches[0] : e;
     touchStartX = lastTouchX = touch.clientX;
     touchStartY = lastTouchY = touch.clientY;
@@ -893,6 +943,21 @@ $('ksk').innerHTML = $('sk').innerHTML;
       aboutHome.style.pointerEvents = showText ? 'auto' : 'none';
       aboutHome.style.transform = showText ? 'scale(1)' : 'scale(0.85)';
     }
+    if (showText) {
+      if (typeof autoScrollTimer !== 'undefined') clearTimeout(autoScrollTimer);
+      // Photo transition lasts 1.5s. Start auto-scroll once the photo is completely at the icon
+      const delay = animate ? 1600 : 250;
+      if (typeof setTimeout === 'function') {
+        const timer = setTimeout(() => {
+          if (s2.dataset.phase === 'icon' && (typeof textTouched === 'undefined' || !textTouched)) {
+            if (typeof startAutoScroll === 'function') startAutoScroll();
+          }
+        }, delay);
+        if (typeof autoScrollTimer !== 'undefined') autoScrollTimer = timer;
+      }
+    } else {
+      if (typeof stopAutoScroll === 'function') stopAutoScroll();
+    }
   }
   function startExplosion() {
     if(screen2Visible || state === 'exploding') return;
@@ -923,12 +988,16 @@ $('ksk').innerHTML = $('sk').innerHTML;
       aboutHome.style.transform = 'scale(0.85)';
     }
     userTouched = false;
+    textTouched = false;
+    if (typeof stopAutoScroll === "function") stopAutoScroll();
     clearTimeout(aboutTimer);
     /* hold the photo for 5 seconds, then shrink gradually to the corner icon */
     aboutTimer = setTimeout(() => setPos('icon', true), 5000);
   }
   function goHome() {
     clearTimeout(aboutTimer); clearTimeout(revealTimer);
+    if (typeof stopAutoScroll === "function") stopAutoScroll();
+    textTouched = false;
     aboutMusic.pause();
     s2.style.opacity = '0'; s2.style.pointerEvents = 'none';
     if (typeof aboutHome !== 'undefined' && aboutHome && aboutHome.style) {
@@ -945,8 +1014,13 @@ $('ksk').innerHTML = $('sk').innerHTML;
     e.stopPropagation();
     const p = s2.dataset.phase;
     /* tap the corner icon to restore the photo, tap the photo again to shrink back */
-    if(p === 'icon') setPos('big', true);
-    else if(p === 'big') setPos('icon', true);
+    if(p === 'icon') {
+      if (typeof stopAutoScroll === "function") stopAutoScroll();
+      setPos('big', true);
+    } else if(p === 'big') {
+      textTouched = false;
+      setPos('icon', true);
+    }
   });
   aboutHome.addEventListener('click', e => { e.stopPropagation(); goHome(); });
 
