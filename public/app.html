@@ -513,7 +513,7 @@ $('ksk').innerHTML = $('sk').innerHTML;
   s2.setAttribute('aria-label', 'about us');
   /* Independent landscape viewport, never scaled inside the game stage. */
   s2.style.cssText = 'position:fixed;inset:0;z-index:60;background:#000;opacity:0;pointer-events:none;overflow:hidden;transition:none;--about-foreground:#fff';
-  s2.innerHTML = '<h1 id="aboutTitle" dir="ltr" style="position:absolute;left:5%;right:5%;top:clamp(8px,2.2vmin,25px);margin:0;text-align:center;color:var(--about-foreground);font-family:Cairo,sans-serif;font-weight:800;font-size:clamp(20px,5.5vmin,44px);letter-spacing:0;opacity:0">about us</h1><img id="aboutPortrait" alt="الصورة الشخصية" draggable="false" style="position:absolute;left:7.5%;top:clamp(52px,12vmin,90px);width:85%;height:calc(100% - clamp(52px,12vmin,90px));object-fit:cover;object-position:center 15%;display:block;border-radius:24px;cursor:pointer;box-shadow:0 10px 40px rgba(0,0,0,.5)" src="about-photo.jpg"><audio id="aboutMusic" preload="auto" src="careless-whisper.mp3"></audio><button id="aboutHome" aria-label="الرئيسية" style="position:absolute;right:16px;top:16px;width:clamp(56px,10vmin,84px);height:clamp(50px,9vmin,76px);border-radius:24px;border:4px solid #1b9bf2;background:linear-gradient(#3cbcff,#0e86e0);box-shadow:0 6px 0 #0a5a9c;cursor:pointer;display:grid;place-items:center;padding:0;z-index:3"><svg viewBox="0 0 24 24" width="70%" height="70%" fill="#fff"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg></button><div id="aboutText" dir="ltr"></div>';
+  s2.innerHTML = '<h1 id="aboutTitle" dir="ltr" style="position:absolute;left:5%;right:5%;top:clamp(8px,2.2vmin,25px);margin:0;text-align:center;color:var(--about-foreground);font-family:Cairo,sans-serif;font-weight:800;font-size:clamp(20px,5.5vmin,44px);letter-spacing:0;opacity:0">about us</h1><img id="aboutPortrait" alt="الصورة الشخصية" draggable="false" style="position:absolute;left:7.5%;top:clamp(52px,12vmin,90px);width:85%;height:calc(100% - clamp(52px,12vmin,90px));object-fit:cover;object-position:center 15%;display:block;border-radius:24px;cursor:pointer;box-shadow:0 10px 40px rgba(0,0,0,.5)" src="about-photo.jpg"><audio id="aboutMusic" preload="auto" src="careless-whisper.mp3"></audio><button id="aboutHome" aria-label="الرئيسية" style="position:absolute;right:clamp(16px,3.5vmin,28px);top:clamp(12px,2.5vmin,22px);width:clamp(38px,6.2vmin,48px);height:clamp(38px,6.2vmin,48px);border-radius:50%;border:2px solid rgba(77,243,255,.45);background:linear-gradient(135deg,rgba(60,188,255,.25),rgba(14,134,224,.45));box-shadow:0 2px 10px rgba(10,90,156,.35);cursor:pointer;display:grid;place-items:center;padding:0;z-index:3;opacity:0;pointer-events:none;transform:scale(0.85);transition:opacity .5s ease,transform .5s cubic-bezier(.34,1.56,.64,1)"><svg viewBox="0 0 24 24" width="55%" height="55%" fill="#fff"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg></button><div id="aboutText" dir="ltr"></div>';
   s2.dataset.phase = 'idle';
   document.body.appendChild(s2);
   function fitAbout() {
@@ -660,10 +660,87 @@ $('ksk').innerHTML = $('sk').innerHTML;
   const aboutText = s2.querySelector('#aboutText');
   buildAboutText(aboutText);
   aboutPortrait.style.zIndex = '2'; /* photo above the text panel; home button (z:3) above both */
+
+  /* ---------- Smooth, stable scroll & touch-drag handling for About Us ---------- */
+  let touchStartX = 0, touchStartY = 0, lastTouchX = 0, lastTouchY = 0, lastTouchTime = 0;
+  let scrollVelocity = 0, momentumRaf = 0;
+  let isDraggingScroll = false;
+
+  function stopMomentum() {
+    if (momentumRaf) { cancelAnimationFrame(momentumRaf); momentumRaf = 0; }
+  }
+
+  function handleWheel(e) {
+    if (s2.dataset.phase !== 'icon') return;
+    const isRotated = s2.dataset.orientation === 'rotated-landscape';
+    const delta = isRotated
+      ? (Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX)
+      : (Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX);
+    aboutText.scrollTop += delta;
+  }
+  s2.addEventListener('wheel', handleWheel, { passive: true });
+
+  function onTouchStart(e) {
+    if (s2.dataset.phase !== 'icon') return;
+    const touch = e.touches ? e.touches[0] : e;
+    touchStartX = lastTouchX = touch.clientX;
+    touchStartY = lastTouchY = touch.clientY;
+    lastTouchTime = performance.now();
+    scrollVelocity = 0;
+    isDraggingScroll = true;
+    stopMomentum();
+  }
+
+  function onTouchMove(e) {
+    if (!isDraggingScroll || s2.dataset.phase !== 'icon') return;
+    const touch = e.touches ? e.touches[0] : e;
+    const curX = touch.clientX;
+    const curY = touch.clientY;
+    const now = performance.now();
+    const dt = Math.max(1, now - lastTouchTime);
+
+    const isRotated = s2.dataset.orientation === 'rotated-landscape';
+    const dy = lastTouchY - curY;
+    const dx = lastTouchX - curX;
+    const delta = isRotated ? (Math.abs(dy) >= Math.abs(dx) ? dy : dx) : dy;
+
+    if (Math.abs(delta) > 0.5) {
+      aboutText.scrollTop += delta;
+      scrollVelocity = delta / dt;
+      lastTouchX = curX;
+      lastTouchY = curY;
+      lastTouchTime = now;
+      if (e.cancelable && e.type === 'touchmove') e.preventDefault();
+    }
+  }
+
+  function onTouchEnd() {
+    if (!isDraggingScroll) return;
+    isDraggingScroll = false;
+    if (Math.abs(scrollVelocity) > 0.15) {
+      let v = scrollVelocity * 16;
+      const friction = 0.95;
+      function stepMomentum() {
+        if (Math.abs(v) < 0.5 || s2.dataset.phase !== 'icon') {
+          momentumRaf = 0;
+          return;
+        }
+        aboutText.scrollTop += v;
+        v *= friction;
+        momentumRaf = requestAnimationFrame(stepMomentum);
+      }
+      momentumRaf = requestAnimationFrame(stepMomentum);
+    }
+  }
+
+  s2.addEventListener('touchstart', onTouchStart, { passive: true });
+  s2.addEventListener('touchmove', onTouchMove, { passive: false });
+  s2.addEventListener('touchend', onTouchEnd, { passive: true });
+  s2.addEventListener('touchcancel', onTouchEnd, { passive: true });
   /* ---------- About Us story text (shown where the photo was) ---------- */
   function buildAboutText(box) {
     const CSS = [
-      '#aboutText{position:absolute;left:7.5%;right:7.5%;top:clamp(52px,12vmin,90px);bottom:0;overflow-y:auto;overflow-x:hidden;touch-action:auto;',
+      '#aboutText{position:absolute;left:7.5%;right:7.5%;top:clamp(52px,12vmin,90px);bottom:0;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;scroll-behavior:auto;overscroll-behavior:contain;',
       'padding:12px clamp(12px,3vmin,44px) 80px;color:#fff;text-align:center;opacity:0;pointer-events:none;z-index:1;',
       'scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.35) transparent;-webkit-overflow-scrolling:touch}',
       '#aboutText::-webkit-scrollbar{width:8px}',
@@ -808,6 +885,14 @@ $('ksk').innerHTML = $('sk').innerHTML;
     aboutText.style.transition = showText ? 'opacity .9s ease .35s' : 'opacity .45s ease';
     aboutText.style.opacity = showText ? '1' : '0';
     aboutText.style.pointerEvents = showText ? 'auto' : 'none';
+    if (typeof aboutHome !== 'undefined' && aboutHome && aboutHome.style) {
+      aboutHome.style.transition = showText
+        ? 'opacity .6s ease .3s, transform .6s cubic-bezier(.34,1.56,.64,1) .3s'
+        : 'opacity .3s ease, transform .3s ease';
+      aboutHome.style.opacity = showText ? '1' : '0';
+      aboutHome.style.pointerEvents = showText ? 'auto' : 'none';
+      aboutHome.style.transform = showText ? 'scale(1)' : 'scale(0.85)';
+    }
   }
   function startExplosion() {
     if(screen2Visible || state === 'exploding') return;
@@ -831,7 +916,12 @@ $('ksk').innerHTML = $('sk').innerHTML;
     screen2Visible = true; state = 'screen2';
     ctx2.clearRect(0,0,SW,SH);
     setPos('big', false);
-    s2.style.opacity = '1'; s2.style.pointerEvents = 'all';
+    s2.style.opacity = '1'; s2.style.pointerEvents = 'auto';
+    if (typeof aboutHome !== 'undefined' && aboutHome && aboutHome.style) {
+      aboutHome.style.opacity = '0';
+      aboutHome.style.pointerEvents = 'none';
+      aboutHome.style.transform = 'scale(0.85)';
+    }
     userTouched = false;
     clearTimeout(aboutTimer);
     /* hold the photo for 5 seconds, then shrink gradually to the corner icon */
@@ -841,6 +931,11 @@ $('ksk').innerHTML = $('sk').innerHTML;
     clearTimeout(aboutTimer); clearTimeout(revealTimer);
     aboutMusic.pause();
     s2.style.opacity = '0'; s2.style.pointerEvents = 'none';
+    if (typeof aboutHome !== 'undefined' && aboutHome && aboutHome.style) {
+      aboutHome.style.opacity = '0';
+      aboutHome.style.pointerEvents = 'none';
+      aboutHome.style.transform = 'scale(0.85)';
+    }
     setPos('big', false); s2.dataset.phase = 'idle';
     parts = []; exploded = false; fusingT = 0;
     screen2Visible = false; state = 'look';
