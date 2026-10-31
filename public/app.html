@@ -511,10 +511,11 @@ $('ksk').innerHTML = $('sk').innerHTML;
   const s2 = document.createElement('div');
   s2.id = 'aboutScreen';
   s2.setAttribute('aria-label', 'about us');
-  s2.style.cssText = 'position:absolute;inset:0;z-index:50;background:#000;opacity:0;pointer-events:none;overflow:hidden;transition:none;--about-foreground:#fff';
-  s2.innerHTML = '<h1 id="aboutTitle" dir="ltr" style="position:absolute;left:150px;right:150px;top:25px;margin:0;text-align:center;color:var(--about-foreground);font:800 44px Cairo,sans-serif;letter-spacing:0;opacity:0">about us</h1><img id="aboutPortrait" alt="الصورة الشخصية" draggable="false" style="position:absolute;left:115px;top:90px;width:1306px;height:601px;object-fit:cover;object-position:center 15%;display:block;border-radius:24px;cursor:pointer;box-shadow:0 10px 40px rgba(0,0,0,.5)" src="/__l5e/assets-v1/e80a0aef-4a65-4a0b-b7f1-821176eb4b28/about-photo.jpg"><audio id="aboutMusic" preload="auto" src="/__l5e/assets-v1/7f448ce5-82c5-4f18-b710-9249ec9b92f9/careless-whisper.mp3"></audio><button id="aboutHome" aria-label="الرئيسية" style="position:absolute;right:28px;top:28px;width:84px;height:76px;border-radius:24px;border:4px solid #1b9bf2;background:linear-gradient(#3cbcff,#0e86e0);box-shadow:0 6px 0 #0a5a9c;cursor:pointer;display:grid;place-items:center;padding:0;z-index:3"><svg viewBox="0 0 24 24" width="46" height="46" fill="#fff"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg></button><div id="aboutText" dir="ltr"></div>';
+  /* body-level fixed overlay: upright on phones, native touch scrolling (never inside the rotated stage) */
+  s2.style.cssText = 'position:fixed;inset:0;z-index:60;background:#000;opacity:0;pointer-events:none;overflow:hidden;transition:none;--about-foreground:#fff';
+  s2.innerHTML = '<h1 id="aboutTitle" dir="ltr" style="position:absolute;left:5%;right:5%;top:clamp(8px,2.2vmin,25px);margin:0;text-align:center;color:var(--about-foreground);font-family:Cairo,sans-serif;font-weight:800;font-size:clamp(20px,5.5vmin,44px);letter-spacing:0;opacity:0">about us</h1><img id="aboutPortrait" alt="الصورة الشخصية" draggable="false" style="position:absolute;left:7.5%;top:clamp(52px,12vmin,90px);width:85%;height:calc(100% - clamp(52px,12vmin,90px));object-fit:cover;object-position:center 15%;display:block;border-radius:24px;cursor:pointer;box-shadow:0 10px 40px rgba(0,0,0,.5)" src="about-photo.jpg"><audio id="aboutMusic" preload="auto" src="careless-whisper.mp3"></audio><button id="aboutHome" aria-label="الرئيسية" style="position:absolute;right:16px;top:16px;width:clamp(56px,10vmin,84px);height:clamp(50px,9vmin,76px);border-radius:24px;border:4px solid #1b9bf2;background:linear-gradient(#3cbcff,#0e86e0);box-shadow:0 6px 0 #0a5a9c;cursor:pointer;display:grid;place-items:center;padding:0;z-index:3"><svg viewBox="0 0 24 24" width="70%" height="70%" fill="#fff"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg></button><div id="aboutText" dir="ltr"></div>';
   s2.dataset.phase = 'idle';
-  stage.appendChild(s2);
+  document.body.appendChild(s2);
 
   /* --- sizing: sync with the stage (1536×691 logical space) --- */
   const SW = 1536, SH = 691;
@@ -647,25 +648,25 @@ $('ksk').innerHTML = $('sk').innerHTML;
   /* ---------- About Us story text (shown where the photo was) ---------- */
   function buildAboutText(box) {
     const CSS = [
-      '#aboutText{position:absolute;left:115px;right:115px;top:90px;bottom:0;overflow-y:auto;overflow-x:hidden;',
-      'padding:12px 44px 80px;color:#fff;text-align:center;opacity:0;pointer-events:none;z-index:1;',
+      '#aboutText{position:absolute;left:7.5%;right:7.5%;top:clamp(52px,12vmin,90px);bottom:0;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;',
+      'padding:12px clamp(12px,3vmin,44px) 80px;color:#fff;text-align:center;opacity:0;pointer-events:none;z-index:1;',
       'scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.35) transparent;-webkit-overflow-scrolling:touch}',
       '#aboutText::-webkit-scrollbar{width:8px}',
       '#aboutText::-webkit-scrollbar-track{background:transparent}',
       '#aboutText::-webkit-scrollbar-thumb{background:rgba(255,255,255,.3);border-radius:4px}',
       '#aboutText .inner{max-width:980px;margin:0 auto}',
-      '#aboutText .tagline{font:900 34px/1.5 Cairo,sans-serif;color:#4df3ff;margin:10px 0 8px;text-shadow:0 2px 0 rgba(0,0,0,.45)}',
-      '#aboutText h2{font:800 30px/1.35 Cairo,sans-serif;color:#4df3ff;margin:34px 0 12px;padding-bottom:8px;border-bottom:2px solid rgba(77,243,255,.25)}',
-      '#aboutText h3{font:800 26px/1.35 Cairo,sans-serif;margin:24px 0 8px;color:#fff}',
-      '#aboutText p{font:600 21px/1.8 Cairo,sans-serif;color:rgba(255,255,255,.93);margin:0 0 14px}',
+      '#aboutText .tagline{font-family:Cairo,sans-serif;font-weight:900;font-size:clamp(16px,4.2vmin,34px);line-height:1.5;color:#4df3ff;margin:10px 0 8px;text-shadow:0 2px 0 rgba(0,0,0,.45)}',
+      '#aboutText h2{font-family:Cairo,sans-serif;font-weight:800;font-size:clamp(15px,3.6vmin,30px);line-height:1.35;color:#4df3ff;margin:34px 0 12px;padding-bottom:8px;border-bottom:2px solid rgba(77,243,255,.25)}',
+      '#aboutText h3{font-family:Cairo,sans-serif;font-weight:800;font-size:clamp(14px,3.1vmin,26px);line-height:1.35;margin:24px 0 8px;color:#fff}',
+      '#aboutText p{font-family:Cairo,sans-serif;font-weight:600;font-size:clamp(12px,2.5vmin,21px);line-height:1.8;color:rgba(255,255,255,.93);margin:0 0 14px}',
       '#aboutText ul{text-align:left;display:inline-block;margin:0 auto 14px;padding-left:26px}',
-      '#aboutText li{font:600 21px/1.7 Cairo,sans-serif;color:rgba(255,255,255,.93);margin-bottom:8px}',
-      '#aboutText .quote{font:800 23px/1.6 Cairo,sans-serif;color:#ffd84a;margin:16px 0}',
+      '#aboutText li{font-family:Cairo,sans-serif;font-weight:600;font-size:clamp(12px,2.5vmin,21px);line-height:1.7;color:rgba(255,255,255,.93);margin-bottom:8px}',
+      '#aboutText .quote{font-family:Cairo,sans-serif;font-weight:800;font-size:clamp(13px,2.7vmin,23px);line-height:1.6;color:#ffd84a;margin:16px 0}',
       '#aboutText .credits{display:inline-block;text-align:left;background:rgba(255,255,255,.07);border:1px solid rgba(77,243,255,.3);border-radius:16px;padding:14px 26px;margin:4px 0 16px}',
-      '#aboutText .credits div{font:700 21px/1.9 Cairo,sans-serif}',
+      '#aboutText .credits div{font-family:Cairo,sans-serif;font-weight:700;font-size:clamp(12px,2.5vmin,21px);line-height:1.9}',
       '#aboutText .credits b{color:#4df3ff}',
-      '#aboutText .motto{font:900 26px/1.5 Cairo,sans-serif;color:#4df3ff;margin:20px 0 8px}',
-      '#aboutText .copyright{margin-top:38px;font:700 19px/1.4 Cairo,sans-serif;color:rgba(255,255,255,.65)}'
+      '#aboutText .motto{font-family:Cairo,sans-serif;font-weight:900;font-size:clamp(14px,3.1vmin,26px);line-height:1.5;color:#4df3ff;margin:20px 0 8px}',
+      '#aboutText .copyright{margin-top:38px;font-family:Cairo,sans-serif;font-weight:700;font-size:clamp(11px,2.3vmin,19px);line-height:1.4;color:rgba(255,255,255,.65)}'
     ].join('');
 
     const p   = t => '<p>' + t + '</p>';
@@ -777,8 +778,8 @@ $('ksk').innerHTML = $('sk').innerHTML;
 
   const aboutHome = s2.querySelector('#aboutHome');
   const POS = {
-    big:  {left:'115px',top:'90px',width:'1306px',height:'601px',borderRadius:'24px'},   // fills from just under the title line to the bottom
-    icon: {left:'28px',top:'28px',width:'100px',height:'100px',borderRadius:'50%'}
+    big:  {left:'7.5%',top:'clamp(52px,12vmin,90px)',width:'85%',height:'calc(100% - clamp(52px,12vmin,90px))',borderRadius:'24px'},   // fills from just under the title line to the bottom
+    icon: {left:'18px',top:'18px',width:'clamp(56px,12vmin,100px)',height:'clamp(56px,12vmin,100px)',borderRadius:'50%'}
   };
   let aboutTimer = 0, revealTimer = 0;
   let userTouched = false;
