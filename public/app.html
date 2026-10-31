@@ -511,11 +511,21 @@ $('ksk').innerHTML = $('sk').innerHTML;
   const s2 = document.createElement('div');
   s2.id = 'aboutScreen';
   s2.setAttribute('aria-label', 'about us');
-  /* body-level fixed overlay: upright on phones, native touch scrolling (never inside the rotated stage) */
+  /* Independent landscape viewport, never scaled inside the game stage. */
   s2.style.cssText = 'position:fixed;inset:0;z-index:60;background:#000;opacity:0;pointer-events:none;overflow:hidden;transition:none;--about-foreground:#fff';
   s2.innerHTML = '<h1 id="aboutTitle" dir="ltr" style="position:absolute;left:5%;right:5%;top:clamp(8px,2.2vmin,25px);margin:0;text-align:center;color:var(--about-foreground);font-family:Cairo,sans-serif;font-weight:800;font-size:clamp(20px,5.5vmin,44px);letter-spacing:0;opacity:0">about us</h1><img id="aboutPortrait" alt="الصورة الشخصية" draggable="false" style="position:absolute;left:7.5%;top:clamp(52px,12vmin,90px);width:85%;height:calc(100% - clamp(52px,12vmin,90px));object-fit:cover;object-position:center 15%;display:block;border-radius:24px;cursor:pointer;box-shadow:0 10px 40px rgba(0,0,0,.5)" src="about-photo.jpg"><audio id="aboutMusic" preload="auto" src="careless-whisper.mp3"></audio><button id="aboutHome" aria-label="الرئيسية" style="position:absolute;right:16px;top:16px;width:clamp(56px,10vmin,84px);height:clamp(50px,9vmin,76px);border-radius:24px;border:4px solid #1b9bf2;background:linear-gradient(#3cbcff,#0e86e0);box-shadow:0 6px 0 #0a5a9c;cursor:pointer;display:grid;place-items:center;padding:0;z-index:3"><svg viewBox="0 0 24 24" width="70%" height="70%" fill="#fff"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg></button><div id="aboutText" dir="ltr"></div>';
   s2.dataset.phase = 'idle';
   document.body.appendChild(s2);
+  function fitAbout() {
+    const portrait = innerHeight > innerWidth;
+    s2.style.inset = 'auto';
+    s2.style.left = '50%'; s2.style.top = '50%';
+    s2.style.width = (portrait ? innerHeight : innerWidth) + 'px';
+    s2.style.height = (portrait ? innerWidth : innerHeight) + 'px';
+    s2.style.transform = 'translate(-50%,-50%)' + (portrait ? ' rotate(90deg)' : '');
+    s2.dataset.orientation = portrait ? 'rotated-landscape' : 'landscape';
+  }
+  addEventListener('resize', fitAbout); fitAbout();
 
   /* --- sizing: sync with the stage (1536×691 logical space) --- */
   const SW = 1536, SH = 691;
@@ -642,13 +652,18 @@ $('ksk').innerHTML = $('sk').innerHTML;
   const aboutPortrait = s2.querySelector('#aboutPortrait');
   const aboutTitle = s2.querySelector('#aboutTitle');
   const aboutMusic = s2.querySelector('#aboutMusic');
+  // The original MP3 starts with 1.307 seconds of silence; leave the file intact.
+  const ABOUT_MUSIC_START = 1.31;
+  aboutMusic.addEventListener('loadedmetadata', () => { aboutMusic.currentTime = ABOUT_MUSIC_START; });
+  if (aboutMusic.readyState >= 1) aboutMusic.currentTime = ABOUT_MUSIC_START;
+  aboutPortrait.decode().catch(() => {});
   const aboutText = s2.querySelector('#aboutText');
   buildAboutText(aboutText);
   aboutPortrait.style.zIndex = '2'; /* photo above the text panel; home button (z:3) above both */
   /* ---------- About Us story text (shown where the photo was) ---------- */
   function buildAboutText(box) {
     const CSS = [
-      '#aboutText{position:absolute;left:7.5%;right:7.5%;top:clamp(52px,12vmin,90px);bottom:0;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;',
+      '#aboutText{position:absolute;left:7.5%;right:7.5%;top:clamp(52px,12vmin,90px);bottom:0;overflow-y:auto;overflow-x:hidden;touch-action:auto;',
       'padding:12px clamp(12px,3vmin,44px) 80px;color:#fff;text-align:center;opacity:0;pointer-events:none;z-index:1;',
       'scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.35) transparent;-webkit-overflow-scrolling:touch}',
       '#aboutText::-webkit-scrollbar{width:8px}',
@@ -798,6 +813,8 @@ $('ksk').innerHTML = $('sk').innerHTML;
     if(screen2Visible || state === 'exploding') return;
     state = 'exploding'; fusingT = FUSE_DUR; fusePhase = 0; exploded = false; parts = [];
     tap.style.pointerEvents = 'none'; tap.tabIndex = -1;
+    // Atomic handoff on the gesture: no transparent interval exposing home.
+    showAbout();
     try { const A = window.__bAC = window.__bAC || new (window.AudioContext||window.webkitAudioContext)(); A.resume();
       const n = A.currentTime, b = A.createBuffer(1, A.sampleRate*1.6|0, A.sampleRate), d = b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
       const s = A.createBufferSource(), f = A.createBiquadFilter(), g = A.createGain(), o = A.createOscillator(), og = A.createGain(); s.buffer = b;
@@ -806,7 +823,7 @@ $('ksk').innerHTML = $('sk').innerHTML;
       o.frequency.setValueAtTime(110,n); o.frequency.exponentialRampToValueAtTime(30,n+.8); og.gain.setValueAtTime(.8,n); og.gain.exponentialRampToValueAtTime(.001,n+.9);
       s.connect(f); f.connect(g); g.connect(A.destination); o.connect(og); og.connect(A.destination); s.start(); o.start(); o.stop(n+1);
     } catch(e) {}
-    aboutMusic.currentTime = 0;
+    aboutMusic.currentTime = ABOUT_MUSIC_START;
     aboutMusic.play().catch(() => { s2.dataset.audio = 'blocked'; });
   }
   function showAbout() {
@@ -929,16 +946,10 @@ $('ksk').innerHTML = $('sk').innerHTML;
         const fl = document.createElement('div');
         fl.style.cssText='position:absolute;inset:0;background:#fff;z-index:49;pointer-events:none';
         stage.appendChild(fl);
-        setTimeout(()=>{ fl.style.transition='opacity .5s'; fl.style.opacity=0; setTimeout(()=>fl.remove(),520); },80);
-        revealTimer = setTimeout(showAbout, 450);
+        showAbout();
+        fl.remove();
       }
       drawParts(ctx2, dt);
-      const explosionVisible = exploded && ctx2.getImageData(0,0,SW,SH).data.some((value,index) => index % 4 === 3 && value > 0);
-      if(false) {
-        ctx2.clearRect(0,0,SW,SH);
-        screen2Visible=true; s2.style.opacity='1'; s2.style.pointerEvents='all'; state='screen2';
-        tap.style.pointerEvents='none';
-      }
       return;
     }
 
